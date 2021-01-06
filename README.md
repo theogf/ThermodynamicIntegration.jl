@@ -6,3 +6,23 @@
 [![Coverage](https://coveralls.io/repos/github/theogf/ThermodynamicIntegration.jl/badge.svg?branch=master)](https://coveralls.io/github/theogf/ThermodynamicIntegration.jl?branch=master)
 [![Code Style: Blue](https://img.shields.io/badge/code%20style-blue-4495d1.svg)](https://github.com/invenia/BlueStyle)
 [![ColPrac: Contributor's Guide on Collaborative Practices for Community Packages](https://img.shields.io/badge/ColPrac-Contributor's%20Guide-blueviolet)](https://github.com/SciML/ColPrac)
+
+A simple package to compute Thermodynamic Integration for computing the evidence in a Bayesian setting.
+You need to provide the `logprior` and the `loglikelihood` as well as an initial sample:
+```julia
+    using Distributions, ThermodynamicIntegration
+    D = 5
+    prior = MvNormal(0.5 * ones(D))
+    likelihood = MvNormal(2.0 * ones(D))
+    logprior(x) = logpdf(prior, x)
+    loglikelihood(x) = logpdf(likelihood, x)
+
+    alg = ThermInt(n_samples=5000)
+
+    logZ = alg(logprior, loglikelihood, rand(prior)) # Compute the log evidence
+    # -8.212980567033792
+    Σ = Diagonal(inv(inv(cov(prior)) + inv(cov(likelihood))))
+    posterior = MvNormal(Diagonal(Σ))
+    true_logZ = 0.5 * (logdetcov(posterior) - D * log(2π)) # we compare twith the true value
+    # -8.211990123364176
+```
