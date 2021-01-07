@@ -13,6 +13,7 @@ Trapz = "592b5752-818d-11e9-1e9a-2b8ca4a44cd1"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 
 [compat]
+Trapz = "2.0"
 julia = "1"
 
 [extras]
