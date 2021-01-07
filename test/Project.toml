@@ -1,0 +1,4 @@
+[deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
