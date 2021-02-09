@@ -2,6 +2,7 @@ using ThermodynamicIntegration
 using Distributions
 using Test
 using ForwardDiff
+using LinearAlgebra
 @testset "ThermodynamicIntegration.jl" begin
     D = 5
     prior = MvNormal(0.5 * ones(D))
