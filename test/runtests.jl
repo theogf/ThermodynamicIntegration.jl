@@ -10,9 +10,13 @@ using ForwardDiff
     loglikelihood(x) = logpdf(likelihood, x)
     alg = ThermInt(n_samples=5000)
     logZ = alg(logprior, loglikelihood, rand(prior))
+    # @model function gauss(y, β)
+    #     x ~ prior
+    #     y ~ MvNormal(x, cov(likelihood))^β
+    # end
 
-    Σ = Diagonal(inv(inv(cov(prior)) + inv(cov(likelihood))))
-    posterior = MvNormal(Diagonal(Σ))
-    true_logZ = 0.5 * (logdetcov(posterior) - D * log(2π))
+    # m  = gauss(zeros(D))
+    # Turing.loglikelihood((y=zeros(D),), (x=rand(D),),m,nothing)
+    true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
     @test logZ ≈ true_logZ atol=1e-2
 end

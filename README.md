@@ -20,9 +20,7 @@ You need to provide the `logprior` and the `loglikelihood` as well as an initial
     alg = ThermInt(n_samples=5000)
 
     logZ = alg(logprior, loglikelihood, rand(prior)) # Compute the log evidence
-    # -8.212980567033792
-    Σ = Diagonal(inv(inv(cov(prior)) + inv(cov(likelihood))))
-    posterior = MvNormal(Diagonal(Σ))
-    true_logZ = 0.5 * (logdetcov(posterior) - D * log(2π)) # we compare twith the true value
+    # -8.244829688529377
+    true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π)) # we compare twith the true value
     # -8.211990123364176
 ```
