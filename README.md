@@ -24,3 +24,24 @@ You need to provide the `logprior` and the `loglikelihood` as well as an initial
     true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π)) # we compare twith the true value
     # -8.211990123364176
 ```
+
+You can also simply pass a Turing model :
+```julia
+    using Turing
+    @model function gauss(y)
+        x ~ prior
+        y ~ MvNormal(x, cov(likelihood))
+    end
+
+    alg = ThermInt(n_samples=5000)
+    model = gauss(zeros(D))
+    turing_logZ = alg(model)
+    # # -8.211990123364176
+```
+
+Right now sampling is based on [`AdvancedHMC.jl`](https://github.com/TuringLang/AdvancedHMC.jl), with the `ForwardDiff` AD backend.
+To change the backend to `Zygote` or `ReverseDiff` (recommended for variables with large dimensions you can do:
+```julia
+    using Zygote # (or ReverseDiff)
+    ThermoDynamicIntegration.set_adbackend(:Zygote) # (or :ReverseDiff)
+```
