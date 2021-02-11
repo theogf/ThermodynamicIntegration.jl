@@ -19,6 +19,6 @@ using Turing
     m = gauss(zeros(D))
     turing_logZ = alg(m)
     true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
-    @test logZ ≈ true_logZ atol=1e-2
-    @test turing_logZ ≈ true_logZ atol=1e-2
+    @test logZ ≈ true_logZ atol=1e-1
+    @test turing_logZ ≈ true_logZ atol=1e-1
 # end
