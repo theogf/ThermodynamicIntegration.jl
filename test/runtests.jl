@@ -3,7 +3,7 @@ using Distributions
 using Test
 using LinearAlgebra
 using Turing
-# @testset "ThermodynamicIntegration.jl" begin
+@testset "ThermodynamicIntegration.jl" begin
     D = 5
     prior = MvNormal(0.5 * ones(D))
     likelihood = MvNormal(2.0 * ones(D))
@@ -21,4 +21,4 @@ using Turing
     true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
     @test logZ ≈ true_logZ atol=1e-1
     @test turing_logZ ≈ true_logZ atol=1e-1
-# end
+end
