@@ -32,7 +32,7 @@ function ThermInt(schedule; n_samples::Int = 2000, n_warmup::Int = 500)
     return ThermInt(GLOBAL_RNG, schedule, n_samples = n_samples, n_warmup = n_warmup)
 end
 
-function ThermInt(rng::AbstractRNG, n_steps; n_samples::Int = 2000, n_warmup::Int = 500)
+function ThermInt(rng::AbstractRNG, n_steps::Int; n_samples::Int = 2000, n_warmup::Int = 500)
     return ThermInt(rng, ((1:n_steps) ./ n_steps) .^ 5, n_samples, n_warmup, rng)
 end
 
@@ -73,6 +73,8 @@ function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
 
     samples, stats = sample(alg.rng, hamiltonian, proposal, x_init, alg.n_samples, adaptor, alg.n_warmup; verbose=false, progress=false)
     return samples
+end
+
 function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
     D = length(x_init)
     metric = DiagEuclideanMetric(D)
