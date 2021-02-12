@@ -19,29 +19,23 @@ struct ThermInt{AD,TRNG,V}
     rng::TRNG
 end
 
-function ThermInt(rng::AbstractRNG, schedule; n_samples::Int = 2000, n_warmup::Int = 500)
+function ThermInt(rng::AbstractRNG, schedule; n_samples::Int=2000, n_warmup::Int=500)
     return ThermInt{ADBACKEND[],typeof(rng),typeof(schedule)}(
-        schedule,
-        n_samples,
-        n_warmup,
-        rng,
+        schedule, n_samples, n_warmup, rng
     )
 end
 
-function ThermInt(schedule; n_samples::Int = 2000, n_warmup::Int = 500)
-    return ThermInt(GLOBAL_RNG, schedule, n_samples = n_samples, n_warmup = n_warmup)
+function ThermInt(schedule; n_samples::Int=2000, n_warmup::Int=500)
+    return ThermInt(GLOBAL_RNG, schedule; n_samples=n_samples, n_warmup=n_warmup)
 end
 
-function ThermInt(rng::AbstractRNG, n_steps::Int; n_samples::Int = 2000, n_warmup::Int = 500)
+function ThermInt(rng::AbstractRNG, n_steps::Int; n_samples::Int=2000, n_warmup::Int=500)
     return ThermInt(rng, ((1:n_steps) ./ n_steps) .^ 5, n_samples, n_warmup, rng)
 end
 
-function ThermInt(n_steps::Int = 30; n_samples::Int = 2000, n_warmup::Int = 500)
+function ThermInt(n_steps::Int=30; n_samples::Int=2000, n_warmup::Int=500)
     return ThermInt(
-        GLOBAL_RNG,
-        ((1:n_steps) ./ n_steps) .^ 5,
-        n_samples = n_samples,
-        n_warmup = n_warmup,
+        GLOBAL_RNG, ((1:n_steps) ./ n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
     )
 end
 
@@ -63,16 +57,7 @@ end
 function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
     D = length(x_init)
     metric = DiagEuclideanMetric(D)
-    hamiltonian = get_hamiltonian(metric, powerlogπ, alg)
-    
-    initial_ϵ = find_good_stepsize(hamiltonian, x_init)
-    integrator = Leapfrog(initial_ϵ)
-
-    proposal = AdvancedHMC.NUTS{MultinomialTS, GeneralisedNoUTurn}(integrator)
-    adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
-
-    samples, stats = sample(alg.rng, hamiltonian, proposal, x_init, alg.n_samples, adaptor, alg.n_warmup; verbose=false, progress=false)
-    return samples
+    return hamiltonian = get_hamiltonian(metric, powerlogπ, alg)
 end
 
 function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
@@ -94,15 +79,38 @@ function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
         alg.n_samples,
         adaptor,
         alg.n_warmup;
-        verbose = false,
-        progress = false,
+        verbose=false,
+        progress=false,
     )
     return samples
 end
 
-get_hamiltonian(metric, powerlogπ, ::ThermInt{:ForwardDiff}) =
-    Hamiltonian(metric, powerlogπ, ForwardDiff)
-get_hamiltonian(metric, powerlogπ, ::ThermInt{:Zygote}) =
-    Hamiltonian(metric, powerlogπ, Zygote)
-get_hamiltonian(metric, powerlogπ, ::ThermInt{:ReverseDiff}) =
-    Hamiltonian(metric, powerlogπ, ReverseDiff)
+function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
+    integrator = Leapfrog(initial_ϵ)
+
+    proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+    adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
+
+    samples, stats = sample(
+        alg.rng,
+        hamiltonian,
+        proposal,
+        x_init,
+        alg.n_samples,
+        adaptor,
+        alg.n_warmup;
+        verbose=false,
+        progress=false,
+    )
+    return samples
+end
+
+function get_hamiltonian(metric, powerlogπ, ::ThermInt{:ForwardDiff})
+    return Hamiltonian(metric, powerlogπ, ForwardDiff)
+end
+function get_hamiltonian(metric, powerlogπ, ::ThermInt{:Zygote})
+    return Hamiltonian(metric, powerlogπ, Zygote)
+end
+function get_hamiltonian(metric, powerlogπ, ::ThermInt{:ReverseDiff})
+    return Hamiltonian(metric, powerlogπ, ReverseDiff)
+end

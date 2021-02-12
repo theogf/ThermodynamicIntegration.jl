@@ -10,7 +10,7 @@ function evaluate_loglikelihood(model::DynamicPPL.Model, alg::ThermInt, β::Real
     loglikelihood = get_loglikelihood(model)
     x_init = vec(Array(sample(model, MH(), 1))) # Bad ugly hack cause I don't know how to sample from the prior
     samples = sample_powerlogπ(powerlogπ, alg, x_init)
-    mean(loglikelihood, samples)
+    return mean(loglikelihood, samples)
 end
 
 function power_logjoint(model, β)
