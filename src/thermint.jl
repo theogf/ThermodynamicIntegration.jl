@@ -57,35 +57,9 @@ end
 function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
     D = length(x_init)
     metric = DiagEuclideanMetric(D)
-    return hamiltonian = get_hamiltonian(metric, powerlogπ, alg)
-end
-
-function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
-    D = length(x_init)
-    metric = DiagEuclideanMetric(D)
     hamiltonian = get_hamiltonian(metric, powerlogπ, alg)
 
     initial_ϵ = find_good_stepsize(hamiltonian, x_init)
-    integrator = Leapfrog(initial_ϵ)
-
-    proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
-    adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
-
-    samples, stats = sample(
-        alg.rng,
-        hamiltonian,
-        proposal,
-        x_init,
-        alg.n_samples,
-        adaptor,
-        alg.n_warmup;
-        verbose=false,
-        progress=false,
-    )
-    return samples
-end
-
-function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
     integrator = Leapfrog(initial_ϵ)
 
     proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
