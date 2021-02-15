@@ -17,10 +17,11 @@ const ADBACKEND = Ref(:ForwardDiff)
 set_adbackend(ad::String) = set_adbackend(Symbol(ad))
 set_adbackend(ad::Symbol) = set_adbackend(Val(ad))
 set_adbackend(::Val{:ForwardDiff}) = ADBACKEND[] = :ForwardDiff
-function set_adbackend(ad)
+function set_adbackend(::Any)
     return error(
-        "adbackend should be :ForwardDiff, :Zygote or :ReverseDiff\n" *
-        "For Zygote and ReverseDiff, make sure to have `using Zygote/ReverseDiff` in your script",
+        "ad should be :ForwardDiff, :Zygote or :ReverseDiff\n" *
+        "For Zygote and ReverseDiff, make sure to have" *
+        " `using Zygote/ReverseDiff` in your script",
     )
 end
 
