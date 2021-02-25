@@ -1,7 +1,7 @@
 name = "ThermodynamicIntegration"
 uuid = "1022446e-a4a4-4a46-8bce-0ffd39f68cd3"
 authors = ["Theo Galy-Fajou <theo.galyfajou@gmail.com> and contributors"]
-version = "0.1.1"
+version = "0.1.2"
 
 [deps]
 AdvancedHMC = "0bf59076-c3b1-5ca4-86bd-e02cd72cde3d"
