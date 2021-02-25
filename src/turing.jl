@@ -1,4 +1,4 @@
-using .Turing: DynamicPPL, MH
+using .Turing: DynamicPPL, Prior
 
 function (alg::ThermInt)(model::DynamicPPL.Model)
     ΔlogZ = @showprogress [evaluate_loglikelihood(model, alg, β) for β in alg.schedule]
@@ -8,7 +8,7 @@ end
 function evaluate_loglikelihood(model::DynamicPPL.Model, alg::ThermInt, β::Real)
     powerlogπ = power_logjoint(model, β)
     loglikelihood = get_loglikelihood(model)
-    x_init = vec(Array(sample(model, MH(), 1))) # Bad ugly hack cause I don't know how to sample from the prior
+    x_init = vec(Array(sample(model, Prior(), 1))) # Bad ugly hack cause I don't know how to sample from the prior
     samples = sample_powerlogπ(powerlogπ, alg, x_init)
     return mean(loglikelihood, samples)
 end
