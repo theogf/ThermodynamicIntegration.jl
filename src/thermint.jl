@@ -1,5 +1,5 @@
 """
-    ThermInt([rng::AbstractRNG], n_steps=30; n_samples=2000, n_warmup=500)
+    ThermInt([rng::AbstractRNG]; n_steps=30, n_samples=2000, n_warmup=500)
     ThermInt([rng::AbstractRNG], schedule; n_samples=2000, n_warmup=500)
 
 - `schedule` can be any iterable object
@@ -29,11 +29,11 @@ function ThermInt(schedule; n_samples::Int=2000, n_warmup::Int=500)
     return ThermInt(GLOBAL_RNG, schedule; n_samples=n_samples, n_warmup=n_warmup)
 end
 
-function ThermInt(rng::AbstractRNG, n_steps::Int; n_samples::Int=2000, n_warmup::Int=500)
+function ThermInt(rng::AbstractRNG; n_steps::Int, n_samples::Int=2000, n_warmup::Int=500)
     return ThermInt(rng, ((1:n_steps) ./ n_steps) .^ 5, n_samples, n_warmup, rng)
 end
 
-function ThermInt(n_steps::Int=30; n_samples::Int=2000, n_warmup::Int=500)
+function ThermInt(;n_steps::Int=30, n_samples::Int=2000, n_warmup::Int=500)
     return ThermInt(
         GLOBAL_RNG, ((1:n_steps) ./ n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
     )
