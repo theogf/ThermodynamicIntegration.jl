@@ -39,11 +39,22 @@ function ThermInt(;n_steps::Int=30, n_samples::Int=2000, n_warmup::Int=500)
     )
 end
 
-function (alg::ThermInt)(loglikelihood, logprior, x_init::AbstractVector)
+struct TIParallelize end
+
+function (alg::ThermInt)(loglikelihood, logprior, x_init::AbstractVector; kwargs...)
     ΔlogZ = @showprogress [
-        evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β) for
+        evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...) for
         β in alg.schedule
     ]
+    return trapz(alg.schedule, ΔlogZ)
+end
+
+function (alg::ThermInt)(loglikelihood, logprior, x_init::AbstractVector, ::TIParallelize)
+    Threads.nthreads() > 1 || warn("Only one thread available, parallelization will not happen. Start Julia with `--threads n`")
+    ΔlogZ = ThreadsX.collect(
+        evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β)
+        for β in alg.schedule
+    )
     return trapz(alg.schedule, ΔlogZ)
 end
 
