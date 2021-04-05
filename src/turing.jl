@@ -1,7 +1,30 @@
 using .Turing: DynamicPPL, Prior
 
-function (alg::ThermInt)(model::DynamicPPL.Model)
-    ΔlogZ = @showprogress [evaluate_loglikelihood(model, alg, β) for β in alg.schedule]
+function (alg::ThermInt)(model::DynamicPPL.Model; progress=true, kwargs...)
+    nsteps = length(alg.schedule)
+    p = Progress(nsteps; enabled=progress, desc="TI sampling")
+    ΔlogZ = [
+        begin
+            ProgressMeter.next!(p)
+            evaluate_loglikelihood(model, alg, β)
+        end for β in alg.schedule
+    ]
+    return trapz(alg.schedule, ΔlogZ)
+end
+
+function (alg::ThermInt)(
+    model::DynamicPPL.Model, ::TIParallelThreads; progress=true, kwargs...
+)
+    nsteps = length(alg.schedule)
+    nthreads = min(Threads.nthreads(), nsteps)
+    ΔlogZ = zeros(Float64, nsteps)
+    algs = [deepcopy(alg) for _ in 1:nthreads]
+    p = Progress(nsteps; enabled=progress, desc="TI sampling")
+    Threads.@threads for i in 1:nsteps
+        id = Threads.threadid()
+        ΔlogZ[i] = evaluate_loglikelihood(model, algs[id], alg.schedule[i]; kwargs...)
+        ProgressMeter.next!(p)
+    end
     return trapz(alg.schedule, ΔlogZ)
 end
 

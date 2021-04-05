@@ -33,7 +33,7 @@ function ThermInt(rng::AbstractRNG; n_steps::Int, n_samples::Int=2000, n_warmup:
     return ThermInt(rng, ((1:n_steps) ./ n_steps) .^ 5, n_samples, n_warmup, rng)
 end
 
-function ThermInt(;n_steps::Int=30, n_samples::Int=2000, n_warmup::Int=500)
+function ThermInt(; n_steps::Int=30, n_samples::Int=2000, n_warmup::Int=500)
     return ThermInt(
         GLOBAL_RNG, ((1:n_steps) ./ n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
     )
@@ -41,20 +41,30 @@ end
 
 struct TIParallelThreads end
 
-function (alg::ThermInt)(loglikelihood, logprior, x_init::AbstractVector; progress=true, kwargs...)
+function (alg::ThermInt)(
+    loglikelihood, logprior, x_init::AbstractVector; progress=true, kwargs...
+)
     p = ProgressMeter.Progress(length(alg.schedule); enabled=progress, desc="TI Sampling :")
     ΔlogZ = [
         begin
-            ProgressMeter.next!(p);
+            ProgressMeter.next!(p)
             evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...)
-        end
-        for β in alg.schedule
+        end for β in alg.schedule
     ]
     return trapz(alg.schedule, ΔlogZ)
 end
 
-function (alg::ThermInt)(loglikelihood, logprior, x_init::AbstractVector, ::TIParallelThreads; progress=true, kwargs...)
-    Threads.nthreads() > 1 || warn("Only one thread available, parallelization will not happen. Start Julia with `--threads n`")
+function (alg::ThermInt)(
+    loglikelihood,
+    logprior,
+    x_init::AbstractVector,
+    ::TIParallelThreads;
+    progress=true,
+    kwargs...,
+)
+    Threads.nthreads() > 1 || warn(
+        "Only one thread available, parallelization will not happen. Start Julia with `--threads n`",
+    )
     nsteps = length(alg.schedule)
     nthreads = min(Threads.nthreads(), nsteps)
     ΔlogZ = zeros(Float64, nsteps)
@@ -62,7 +72,9 @@ function (alg::ThermInt)(loglikelihood, logprior, x_init::AbstractVector, ::TIPa
     p = ProgressMeter.Progress(length(alg.schedule); enabled=progress, desc="TI Sampling :")
     Threads.@threads for i in 1:nsteps
         id = Threads.threadid()
-        ΔlogZ[i] = evaluate_loglikelihood(loglikelihood, logprior, algs[id], x_init, alg.schedule[i]; kwargs...)
+        ΔlogZ[i] = evaluate_loglikelihood(
+            loglikelihood, logprior, algs[id], x_init, alg.schedule[i]; kwargs...
+        )
         ProgressMeter.next!(p)
     end
     return trapz(alg.schedule, ΔlogZ)
