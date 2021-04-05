@@ -7,10 +7,9 @@ using ProgressMeter
 using Random
 using Requires
 using Statistics
-using ThreadsX
 
 export ThermInt
-export TIParallelize
+export TIParallelThreads
 
 const GLOBAL_RNG = Random.MersenneTwister(42)
 

@@ -3,5 +3,6 @@
         "activityBar.background": "#4A184C",
         "titleBar.activeBackground": "#68226A",
         "titleBar.activeForeground": "#FDF8FD"
-    }
+    },
+    "julia.environmentPath": "/home/theo/.julia/environments/v1.6"
 }
