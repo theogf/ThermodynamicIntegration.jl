@@ -8,4 +8,6 @@
     logZ = alg(logprior, loglikelihood, rand(prior))
     true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
     @test logZ ≈ true_logZ atol=1e-1
+    logZparallel =  alg(logprior, loglikelihood, rand(prior), TIParallelThreads(); progress=false)
+    @test logZparallel ≈ logZ atol=1e-1
 end
