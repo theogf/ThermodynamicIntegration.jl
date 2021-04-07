@@ -62,9 +62,7 @@ function (alg::ThermInt)(
     progress=true,
     kwargs...,
 )
-    Threads.nthreads() > 1 || warn(
-        "Only one thread available, parallelization will not happen. Start Julia with `--threads n`",
-    )
+    Threads.nthreads() > 1 || @warn "Only one thread available, parallelization will not happen. Start Julia with `--threads n`"
     nsteps = length(alg.schedule)
     nthreads = min(Threads.nthreads(), nsteps)
     ΔlogZ = zeros(Float64, nsteps)
