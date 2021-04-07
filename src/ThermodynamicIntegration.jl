@@ -9,6 +9,7 @@ using Requires
 using Statistics
 
 export ThermInt
+export TIParallelThreads
 
 const GLOBAL_RNG = Random.MersenneTwister(42)
 

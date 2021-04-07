@@ -11,4 +11,7 @@
     logZ = alg(m)
     true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
     @test logZ ≈ true_logZ atol=1e-1
+
+    logZparallel = alg(m, TIParallelThreads(); progress=false)
+    @test logZ ≈ logZparallel atol=1e-1
 end
