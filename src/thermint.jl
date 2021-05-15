@@ -30,7 +30,7 @@ function ThermInt(schedule; n_samples::Int=2000, n_warmup::Int=500)
 end
 
 function ThermInt(rng::AbstractRNG; n_steps::Int, n_samples::Int=2000, n_warmup::Int=500)
-    return ThermInt(rng, ((1:n_steps) ./ n_steps) .^ 5, n_samples, n_warmup, rng)
+    return ThermInt(((1:n_steps) ./ n_steps) .^ 5, n_samples, n_warmup, rng)
 end
 
 function ThermInt(; n_steps::Int=30, n_samples::Int=2000, n_warmup::Int=500)
