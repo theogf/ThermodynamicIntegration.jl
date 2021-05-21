@@ -30,12 +30,12 @@ function ThermInt(schedule; n_samples::Int=2000, n_warmup::Int=500)
 end
 
 function ThermInt(rng::AbstractRNG; n_steps::Int, n_samples::Int=2000, n_warmup::Int=500)
-    return ThermInt(rng, ((1:n_steps) ./ n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup)
+    return ThermInt(rng, range(0, 1, length=n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup)
 end
 
 function ThermInt(; n_steps::Int=30, n_samples::Int=2000, n_warmup::Int=500)
     return ThermInt(
-        GLOBAL_RNG, ((1:n_steps) ./ n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
+        GLOBAL_RNG, range(0, 1, length=n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
     )
 end
 
