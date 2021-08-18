@@ -11,6 +11,8 @@
 
 [Thermodynamic integration]() is a technique from physics to get an accurate estimate of the log evidence.
 By creating a schedule going from the prior to the posterior and estimating the log likelihood at each step one gets a stable ad robust estimate of the log evidence.
+You can find a good reference for the method in the paper ["Computing Bayes Factors Using Thermodynamic Integration"](https://academic.oup.com/sysbio/article/55/2/195/1620800?login=true)
+Additionally I wrote a [short blog post](https://theogf.github.io/bayesiantribulations/blogposts/thermint/) about it.
 
 ## A simple example
 
@@ -68,6 +70,7 @@ More samplers will be available in the future.
 ## Further options
 
 You can disactivate the progress by calling `progress=false`
-```julia
-    alg()
-```
+
+## Reference
+
+[Lartillot, N., & Philippe, H. (2006). Computing Bayes factors using thermodynamic integration](https://academic.oup.com/sysbio/article/55/2/195/1620800?login=true)
