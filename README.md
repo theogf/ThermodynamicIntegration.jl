@@ -14,6 +14,8 @@ By creating a schedule going from the prior to the posterior and estimating the 
 You can find a good reference for the method in the paper ["Computing Bayes Factors Using Thermodynamic Integration"](https://academic.oup.com/sysbio/article/55/2/195/1620800?login=true)
 Additionally I wrote a [short blog post](https://theogf.github.io/bayesiantribulations/blogposts/thermint/) about it.
 
+For a different way of computing the evidence integral see also my [BayesianQuadrature package](https://github.com/theogf/BayesianQuadrature.jl).
+
 ## A simple example
 
 A simple package to compute Thermodynamic Integration for computing the evidence in a Bayesian setting.
