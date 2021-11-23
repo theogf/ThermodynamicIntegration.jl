@@ -78,25 +78,31 @@ function (alg::ThermInt)(
     return trapz(alg.schedule, ΔlogZ)
 end
 
-function evaluate_loglikelihood(loglikelihood, logprior, alg::ThermInt, x_init, β::Real)
+function evaluate_loglikelihood(loglikelihood, logprior, alg::ThermInt, x_init, β::Real; keep_init::Bool=false, kwargs...)
     powerlogπ(θ) = β * loglikelihood(θ) + logprior(θ)
-    samples = sample_powerlogπ(powerlogπ, alg, x_init)
-    x_init .= samples[end] # Update the initial sample to be the last one of the chain
+    sampler = sampler_powerlogπ(powerlogπ, alg, x_init)
+
     return mean(loglikelihood, samples)
+        if !keep_init
+        x_init .= samples[end] # Update the initial sample to be the last one of the chain
+    end
 end
 
-function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
+function sampler_powerlogπ(powerlogπ, alg::ThermInt, x_init; kernel=nothing, metric=nothing, adaptor=nothing)
     D = length(x_init)
-    metric = DiagEuclideanMetric(D)
-    hamiltonian = get_hamiltonian(metric, powerlogπ, alg)
 
+    metric = isnothing(metric) ? DiagEuclideanMetric(D) : metric
+    hamiltonian = get_hamiltonian(metric, powerlogπ, alg)
+    
     initial_ϵ = find_good_stepsize(hamiltonian, x_init)
     integrator = Leapfrog(initial_ϵ)
-
+    
     proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
     adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
+    
+    sampler = HMCSampler()
 
-    samples, stats = sample(
+    return sampler = AbstractMCMC.Sample(
         alg.rng,
         hamiltonian,
         proposal,
@@ -110,12 +116,12 @@ function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
     return samples
 end
 
-function get_hamiltonian(metric, powerlogπ, ::ThermInt{:ForwardDiff})
-    return Hamiltonian(metric, powerlogπ, ForwardDiff)
+function get_diffmodel(powerlogπ, ::ThermInt{:ForwardDiff})
+    return DifferentiableDensityModel(powerlogπ, ForwardDiff)
 end
-function get_hamiltonian(metric, powerlogπ, ::ThermInt{:Zygote})
-    return Hamiltonian(metric, powerlogπ, Zygote)
+function get_diffmodel(metric, powerlogπ, ::ThermInt{:Zygote})
+    return DifferentiableDensityModel(powerlogπ, Zygote)
 end
-function get_hamiltonian(metric, powerlogπ, ::ThermInt{:ReverseDiff})
-    return Hamiltonian(metric, powerlogπ, ReverseDiff)
+function get_diffmodel(powerlogπ, ::ThermInt{:ReverseDiff})
+    return DifferentiableDensityModel(metric, powerlogπ, ReverseDiff)
 end
