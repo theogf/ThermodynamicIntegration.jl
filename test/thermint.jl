@@ -4,10 +4,15 @@
     likelihood = MvNormal(2.0 * ones(D))
     logprior(x) = logpdf(prior, x)
     loglikelihood(x) = logpdf(likelihood, x)
-    alg = ThermInt(n_samples=5000)
+    alg = ThermInt(; n_samples=5000)
     logZ = alg(logprior, loglikelihood, rand(prior))
     true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
-    @test logZ ≈ true_logZ atol=1e-1
-    logZparallel =  alg(logprior, loglikelihood, rand(prior), TIParallelThreads(); progress=false)
-    @test logZparallel ≈ logZ atol=1e-1
+    @test logZ ≈ true_logZ atol = 1e-1
+    logZparallel = alg(
+        logprior, loglikelihood, rand(prior), TIParallelThreads(); progress=false
+    )
+    @test logZparallel ≈ logZ atol = 1e-1
+
+    @test_throws ArgumentError alg(logprior, loglikelihood, first(rand(prior)))
+    @test_throws ArgumentError alg(logprior, loglikelihood, first(rand(prior)), TIParallelThreads())
 end

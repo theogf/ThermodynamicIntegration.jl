@@ -11,11 +11,7 @@ makedocs(;
         canonical="https://theogf.github.io/ThermodynamicIntegration.jl",
         assets=String[],
     ),
-    pages=[
-        "Home" => "index.md",
-    ],
+    pages=["Home" => "index.md"],
 )
 
-deploydocs(;
-    repo="github.com/theogf/ThermodynamicIntegration.jl",
-)
+deploydocs(; repo="github.com/theogf/ThermodynamicIntegration.jl")
