@@ -30,12 +30,14 @@ function ThermInt(schedule; n_samples::Int=2000, n_warmup::Int=500)
 end
 
 function ThermInt(rng::AbstractRNG; n_steps::Int, n_samples::Int=2000, n_warmup::Int=500)
-    return ThermInt(rng, range(0, 1, length=n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup)
+    return ThermInt(
+        rng, range(0, 1; length=n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
+    )
 end
 
 function ThermInt(; n_steps::Int=30, n_samples::Int=2000, n_warmup::Int=500)
     return ThermInt(
-        GLOBAL_RNG, range(0, 1, length=n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
+        GLOBAL_RNG, range(0, 1; length=n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
     )
 end
 
@@ -62,7 +64,8 @@ function (alg::ThermInt)(
     progress=true,
     kwargs...,
 )
-    Threads.nthreads() > 1 || @warn "Only one thread available, parallelization will not happen. Start Julia with `--threads n`"
+    Threads.nthreads() > 1 ||
+        @warn "Only one thread available, parallelization will not happen. Start Julia with `--threads n`"
     nsteps = length(alg.schedule)
     nthreads = min(Threads.nthreads(), nsteps)
     ΔlogZ = zeros(Float64, nsteps)
@@ -76,6 +79,24 @@ function (alg::ThermInt)(
         ProgressMeter.next!(p)
     end
     return trapz(alg.schedule, ΔlogZ)
+end
+
+function (alg::ThermInt)(
+    loglikelihood,
+    logprior,
+    x_init::Real,
+    method::TIParallelThreads=TIParallelThreads();
+    kwargs...,
+)
+    throw(
+        ArgumentError(
+            "Given your `x_init`, it looks like you are trying to work" *
+            "with a model with one scalar random variable." *
+            "Unfortunately, only an `AbstractVector` can be passed." *
+            "An easy work around it to do `x_init`->`[x_init]` and to modify" *
+            "`logprior(x) = f(x)` by `logprior(x)=f(only(x))` (and similarly for `loglikelihood`",
+        ),
+    )
 end
 
 function evaluate_loglikelihood(loglikelihood, logprior, alg::ThermInt, x_init, β::Real)
