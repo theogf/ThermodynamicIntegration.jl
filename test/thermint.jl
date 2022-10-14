@@ -21,6 +21,7 @@ end
     test_basic_model(alg, TIThreads())
 
     # Test distributed version
+    addprocs(Sys.iswindows() ? div(Sys.CPU_THREADS::Int, 2) : Sys.CPU_THREADS::Int; exeflags=`--project=$(Base.active_project())`)
     @everywhere begin
         using ThermodynamicIntegration
         using Distributions

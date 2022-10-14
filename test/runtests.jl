@@ -1,4 +1,5 @@
 using ThermodynamicIntegration
+using Distributed
 using Distributions
 using Test
 using LinearAlgebra
