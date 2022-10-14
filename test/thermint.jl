@@ -1,22 +1,29 @@
-@testset "thermint" begin
-    D = 5
+function test_basic_model(alg::ThermInt, TImethod::ThermodynamicIntegration.TIEnsemble=TISerial(); D=5, atol=1e-1)
     prior = MvNormal(0.5 * ones(D))
     likelihood = MvNormal(2.0 * ones(D))
     logprior(x) = logpdf(prior, x)
     loglikelihood(x) = logpdf(likelihood, x)
-    alg = ThermInt(; n_samples=5000)
-    logZ = alg(logprior, loglikelihood, rand(prior))
+    logZ = alg(logprior, loglikelihood, rand(prior), TImethod)
     true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
-    @test logZ ≈ true_logZ atol = 1e-1
-    logZ_threads = alg(logprior, loglikelihood, rand(prior), TIThreads(); progress=false)
-    @test logZ_threads ≈ true_logZ atol = 1e-1
-    logZ_processes = alg(
-        logprior, loglikelihood, rand(prior), TIProcesses(); progress=false
-    )
-    @test logZ_processes ≈ true_logZ atol = 1e-1
-
-    @test_throws ArgumentError alg(logprior, loglikelihood, first(rand(prior)))
+    @test logZ ≈ true_logZ atol = atol
+    @test_throws ArgumentError alg(logprior, loglikelihood, first(rand(prior)), TImethod)
     @test_throws ArgumentError alg(
-        logprior, loglikelihood, first(rand(prior)), TIParallelThreads()
+        logprior, loglikelihood, first(rand(prior)), TImethod
     )
+end
+
+@testset "Basic model" begin
+    alg = ThermInt(;n_samples=5000)
+    # Test serialized version
+    test_basic_model(alg, TISerial())
+
+    # Test multithreaded version
+    test_basic_model(alg, TIThreads())
+
+    # Test distributed version
+    @everywhere begin
+        using ThermodynamicIntegration
+        using Distributions
+    end
+    test_basic_model(alg, TIDistributed())
 end

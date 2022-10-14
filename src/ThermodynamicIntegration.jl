@@ -10,8 +10,7 @@ using Statistics
 using Trapz
 
 export ThermInt
-export TIThreads
-export TIProcesses
+export TISerial, TIThreads, TIDistributed
 
 const GLOBAL_RNG = Random.MersenneTwister(42)
 

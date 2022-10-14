@@ -45,7 +45,7 @@ abstract type TIEnsemble end
 struct TISerial <: TIEnsemble end
 struct TIThreads <: TIEnsemble end
 @deprecate TIParallelThreads TIThreads
-struct TIProcesses <: TIEnsemble end
+struct TIDistributed <: TIEnsemble end
 
 function (alg::ThermInt)(
     loglikelihood,
@@ -56,7 +56,7 @@ function (alg::ThermInt)(
     kwargs...,
 )
     p = ProgressMeter.Progress(
-        length(alg.schedule); enabled=progress, desc="TI Serial Sampling:"
+        length(alg.schedule); enabled=progress, desc="TI Sampling:"
     )
     ΔlogZ = map(alg.schedule) do β
         val = evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...)
@@ -80,7 +80,7 @@ function (alg::ThermInt)(
     ΔlogZ = zeros(Float64, nsteps)
     algs = [deepcopy(alg) for _ in 1:nthreads]
     p = ProgressMeter.Progress(
-        length(alg.schedule); enabled=progress, desc="TI (multiple threads) Sampling:"
+        length(alg.schedule); enabled=progress, desc="TI Multithreaded Sampling:"
     )
     Threads.@threads for i in 1:nsteps
         id = Threads.threadid()
@@ -93,25 +93,24 @@ function (alg::ThermInt)(
 end
 
 function check_processes()
-    return Distributed.nprocs() > 1 ||
+    return Distributed.nworkers() > 1 ||
            @warn "Only one process available, parallelization will not happen. Start Julia with `julia -p n`"
 end
 
 function (alg::ThermInt)(
-    loglikelihood, logprior, x_init::AbstractVector, ::TIProcesses; progress=true, kwargs...
+    loglikelihood, logprior, x_init::AbstractVector, ::TIDistributed; progress=false, kwargs...
 )
     check_processes()
-    p = ProgressMeter.Progress(
-        length(alg.schedule); enabled=progress, desc="TI (multiple processes) Sampling :"
-    )
-    @everywhere begin
-        using ThermodynamicIntegration
+    progress && @warn "progress is not possible with distributed computing for now."
+    # p = ProgressMeter.Progress(
+        # length(alg.schedule); enabled=progress, desc="TI (multiple processes) Sampling :"
+    # )
+
+    pool = Distributed.CachingPool(Distributed.workers())
+    function local_eval(β)
+        evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...)
     end
-    ΔlogZ = pmap(alg.schedule) do β
-        val = evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...)
-        ProgressMeter.next!(p)
-        val
-    end
+    ΔlogZ = pmap(local_eval, pool, alg.schedule)
     return trapz(alg.schedule, ΔlogZ)
 end
 

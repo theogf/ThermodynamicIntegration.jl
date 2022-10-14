@@ -29,7 +29,7 @@ function (alg::ThermInt)(model::DynamicPPL.Model, ::TIThreads; progress=true, kw
     return trapz(alg.schedule, ΔlogZ)
 end
 
-function (alg::ThermInt)(model::DynamicPPL.Model, ::TIProcesses; progress=true, kwargs...)
+function (alg::ThermInt)(model::DynamicPPL.Model, ::TIDistributed; progress=true, kwargs...)
     ΔlogZ = zeros(Float64, nsteps)
     algs = [deepcopy(alg) for _ in 1:nthreads]
     p = Progress(nsteps; enabled=progress, desc="TI sampling")
