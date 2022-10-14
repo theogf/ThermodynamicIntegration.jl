@@ -4,15 +4,13 @@ using AdvancedHMC
 using Distributed
 using ForwardDiff
 using ProgressMeter
-using Random
+using Random: Random, AbstractRNG, default_rng
 using Requires
 using Statistics
 using Trapz
 
 export ThermInt
 export TISerial, TIThreads, TIDistributed
-
-const GLOBAL_RNG = Random.MersenneTwister(42)
 
 const ADBACKEND = Ref(:ForwardDiff)
 

@@ -7,12 +7,13 @@
 `(1:n_steps) ./ n_steps).^5`
 
 A `ThermInt` object can then be used as a function:
+
 ```julia
-alg = ThermInt(30)
-alg(loglikelihood, logprior, x_init)
+    alg = ThermInt(30)
+    alg(loglikelihood, logprior, x_init)
 ```
 """
-struct ThermInt{AD,TRNG,V}
+struct ThermInt{AD,TRNG<:AbstractRNG,V}
     schedule::V
     n_samples::Int
     n_warmup::Int
@@ -26,7 +27,7 @@ function ThermInt(rng::AbstractRNG, schedule; n_samples::Int=2000, n_warmup::Int
 end
 
 function ThermInt(schedule; n_samples::Int=2000, n_warmup::Int=500)
-    return ThermInt(GLOBAL_RNG, schedule; n_samples=n_samples, n_warmup=n_warmup)
+    return ThermInt(default_rng(), schedule; n_samples=n_samples, n_warmup=n_warmup)
 end
 
 function ThermInt(rng::AbstractRNG; n_steps::Int, n_samples::Int=2000, n_warmup::Int=500)
@@ -37,7 +38,7 @@ end
 
 function ThermInt(; n_steps::Int=30, n_samples::Int=2000, n_warmup::Int=500)
     return ThermInt(
-        GLOBAL_RNG, range(0, 1; length=n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
+        default_rng(), range(0, 1; length=n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
     )
 end
 
