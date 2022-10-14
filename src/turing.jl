@@ -1,6 +1,8 @@
 using .Turing: DynamicPPL, Prior
 
-function (alg::ThermInt)(model::DynamicPPL.Model; progress=true, kwargs...)
+function (alg::ThermInt)(
+    model::DynamicPPL.Model, ::TISerial=TISerial(); progress=true, kwargs...
+)
     nsteps = length(alg.schedule)
     p = Progress(nsteps; enabled=progress, desc="TI sampling")
     ΔlogZ = [
@@ -12,11 +14,22 @@ function (alg::ThermInt)(model::DynamicPPL.Model; progress=true, kwargs...)
     return trapz(alg.schedule, ΔlogZ)
 end
 
-function (alg::ThermInt)(
-    model::DynamicPPL.Model, ::TIParallelThreads; progress=true, kwargs...
-)
+function (alg::ThermInt)(model::DynamicPPL.Model, ::TIThreads; progress=true, kwargs...)
+    check_threads()
     nsteps = length(alg.schedule)
     nthreads = min(Threads.nthreads(), nsteps)
+    ΔlogZ = zeros(Float64, nsteps)
+    algs = [deepcopy(alg) for _ in 1:nthreads]
+    p = Progress(nsteps; enabled=progress, desc="TI sampling")
+    Threads.@threads for i in 1:nsteps
+        id = Threads.threadid()
+        ΔlogZ[i] = evaluate_loglikelihood(model, algs[id], alg.schedule[i]; kwargs...)
+        ProgressMeter.next!(p)
+    end
+    return trapz(alg.schedule, ΔlogZ)
+end
+
+function (alg::ThermInt)(model::DynamicPPL.Model, ::TIProcesses; progress=true, kwargs...)
     ΔlogZ = zeros(Float64, nsteps)
     algs = [deepcopy(alg) for _ in 1:nthreads]
     p = Progress(nsteps; enabled=progress, desc="TI sampling")

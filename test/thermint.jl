@@ -8,11 +8,15 @@
     logZ = alg(logprior, loglikelihood, rand(prior))
     true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
     @test logZ ≈ true_logZ atol = 1e-1
-    logZparallel = alg(
-        logprior, loglikelihood, rand(prior), TIParallelThreads(); progress=false
+    logZ_threads = alg(logprior, loglikelihood, rand(prior), TIThreads(); progress=false)
+    @test logZ_threads ≈ true_logZ atol = 1e-1
+    logZ_processes = alg(
+        logprior, loglikelihood, rand(prior), TIProcesses(); progress=false
     )
-    @test logZparallel ≈ logZ atol = 1e-1
+    @test logZ_processes ≈ true_logZ atol = 1e-1
 
     @test_throws ArgumentError alg(logprior, loglikelihood, first(rand(prior)))
-    @test_throws ArgumentError alg(logprior, loglikelihood, first(rand(prior)), TIParallelThreads())
+    @test_throws ArgumentError alg(
+        logprior, loglikelihood, first(rand(prior)), TIParallelThreads()
+    )
 end

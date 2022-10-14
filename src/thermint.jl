@@ -41,36 +41,47 @@ function ThermInt(; n_steps::Int=30, n_samples::Int=2000, n_warmup::Int=500)
     )
 end
 
-struct TIParallelThreads end
-
-function (alg::ThermInt)(
-    loglikelihood, logprior, x_init::AbstractVector; progress=true, kwargs...
-)
-    p = ProgressMeter.Progress(length(alg.schedule); enabled=progress, desc="TI Sampling :")
-    ΔlogZ = [
-        begin
-            ProgressMeter.next!(p)
-            evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...)
-        end for β in alg.schedule
-    ]
-    return trapz(alg.schedule, ΔlogZ)
-end
+abstract type TIEnsemble end
+struct TISerial <: TIEnsemble end
+struct TIThreads <: TIEnsemble end
+@deprecate TIParallelThreads TIThreads
+struct TIProcesses <: TIEnsemble end
 
 function (alg::ThermInt)(
     loglikelihood,
     logprior,
     x_init::AbstractVector,
-    ::TIParallelThreads;
+    ::TISerial=TISerial();
     progress=true,
     kwargs...,
 )
-    Threads.nthreads() > 1 ||
-        @warn "Only one thread available, parallelization will not happen. Start Julia with `--threads n`"
+    p = ProgressMeter.Progress(
+        length(alg.schedule); enabled=progress, desc="TI Serial Sampling:"
+    )
+    ΔlogZ = map(alg.schedule) do β
+        val = evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...)
+        ProgressMeter.next!(p)
+        val
+    end
+    return trapz(alg.schedule, ΔlogZ)
+end
+
+function check_threads()
+    return Threads.nthreads() > 1 ||
+           @warn "Only one thread available, parallelization will not happen. Start Julia with `julia --threads n`"
+end
+
+function (alg::ThermInt)(
+    loglikelihood, logprior, x_init::AbstractVector, ::TIThreads; progress=true, kwargs...
+)
+    check_threads()
     nsteps = length(alg.schedule)
     nthreads = min(Threads.nthreads(), nsteps)
     ΔlogZ = zeros(Float64, nsteps)
     algs = [deepcopy(alg) for _ in 1:nthreads]
-    p = ProgressMeter.Progress(length(alg.schedule); enabled=progress, desc="TI Sampling :")
+    p = ProgressMeter.Progress(
+        length(alg.schedule); enabled=progress, desc="TI (multiple threads) Sampling:"
+    )
     Threads.@threads for i in 1:nsteps
         id = Threads.threadid()
         ΔlogZ[i] = evaluate_loglikelihood(
@@ -81,12 +92,31 @@ function (alg::ThermInt)(
     return trapz(alg.schedule, ΔlogZ)
 end
 
+function check_processes()
+    return Distributed.nprocs() > 1 ||
+           @warn "Only one process available, parallelization will not happen. Start Julia with `julia -p n`"
+end
+
 function (alg::ThermInt)(
-    loglikelihood,
-    logprior,
-    x_init::Real,
-    method::TIParallelThreads=TIParallelThreads();
-    kwargs...,
+    loglikelihood, logprior, x_init::AbstractVector, ::TIProcesses; progress=true, kwargs...
+)
+    check_processes()
+    p = ProgressMeter.Progress(
+        length(alg.schedule); enabled=progress, desc="TI (multiple processes) Sampling :"
+    )
+    @everywhere begin
+        using ThermodynamicIntegration
+    end
+    ΔlogZ = pmap(alg.schedule) do β
+        val = evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...)
+        ProgressMeter.next!(p)
+        val
+    end
+    return trapz(alg.schedule, ΔlogZ)
+end
+
+function (alg::ThermInt)(
+    loglikelihood, logprior, x_init::Real, method::TIEnsemble=TISerial(); kwargs...
 )
     throw(
         ArgumentError(
@@ -117,7 +147,7 @@ function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
     proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
     adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
 
-    samples, stats = sample(
+    samples, _ = sample(
         alg.rng,
         hamiltonian,
         proposal,

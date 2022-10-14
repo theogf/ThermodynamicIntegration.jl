@@ -1,15 +1,17 @@
 module ThermodynamicIntegration
 
 using AdvancedHMC
+using Distributed
 using ForwardDiff
-using Trapz
 using ProgressMeter
 using Random
 using Requires
 using Statistics
+using Trapz
 
 export ThermInt
-export TIParallelThreads
+export TIThreads
+export TIProcesses
 
 const GLOBAL_RNG = Random.MersenneTwister(42)
 
