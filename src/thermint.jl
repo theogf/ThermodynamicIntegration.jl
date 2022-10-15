@@ -7,12 +7,13 @@
 `(1:n_steps) ./ n_steps).^5`
 
 A `ThermInt` object can then be used as a function:
+
 ```julia
-alg = ThermInt(30)
-alg(loglikelihood, logprior, x_init)
+    alg = ThermInt(30)
+    alg(loglikelihood, logprior, x_init)
 ```
 """
-struct ThermInt{AD,TRNG,V}
+struct ThermInt{AD,TRNG<:AbstractRNG,V}
     schedule::V
     n_samples::Int
     n_warmup::Int
@@ -26,7 +27,7 @@ function ThermInt(rng::AbstractRNG, schedule; n_samples::Int=2000, n_warmup::Int
 end
 
 function ThermInt(schedule; n_samples::Int=2000, n_warmup::Int=500)
-    return ThermInt(GLOBAL_RNG, schedule; n_samples=n_samples, n_warmup=n_warmup)
+    return ThermInt(default_rng(), schedule; n_samples=n_samples, n_warmup=n_warmup)
 end
 
 function ThermInt(rng::AbstractRNG; n_steps::Int, n_samples::Int=2000, n_warmup::Int=500)
@@ -37,40 +38,52 @@ end
 
 function ThermInt(; n_steps::Int=30, n_samples::Int=2000, n_warmup::Int=500)
     return ThermInt(
-        GLOBAL_RNG, range(0, 1; length=n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
+        default_rng(),
+        range(0, 1; length=n_steps) .^ 5;
+        n_samples=n_samples,
+        n_warmup=n_warmup,
     )
 end
 
-struct TIParallelThreads end
-
-function (alg::ThermInt)(
-    loglikelihood, logprior, x_init::AbstractVector; progress=true, kwargs...
-)
-    p = ProgressMeter.Progress(length(alg.schedule); enabled=progress, desc="TI Sampling :")
-    ΔlogZ = [
-        begin
-            ProgressMeter.next!(p)
-            evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...)
-        end for β in alg.schedule
-    ]
-    return trapz(alg.schedule, ΔlogZ)
-end
+abstract type TIEnsemble end
+struct TISerial <: TIEnsemble end
+struct TIThreads <: TIEnsemble end
+@deprecate TIParallelThreads TIThreads
+struct TIDistributed <: TIEnsemble end
 
 function (alg::ThermInt)(
     loglikelihood,
     logprior,
     x_init::AbstractVector,
-    ::TIParallelThreads;
+    ::TISerial=TISerial();
     progress=true,
     kwargs...,
 )
-    Threads.nthreads() > 1 ||
-        @warn "Only one thread available, parallelization will not happen. Start Julia with `--threads n`"
+    p = ProgressMeter.Progress(length(alg.schedule); enabled=progress, desc="TI Sampling:")
+    ΔlogZ = map(alg.schedule) do β
+        val = evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...)
+        ProgressMeter.next!(p)
+        val
+    end
+    return trapz(alg.schedule, ΔlogZ)
+end
+
+function check_threads()
+    return Threads.nthreads() > 1 ||
+           @warn "Only one thread available, parallelization will not happen. Start Julia with `julia --threads n`"
+end
+
+function (alg::ThermInt)(
+    loglikelihood, logprior, x_init::AbstractVector, ::TIThreads; progress=true, kwargs...
+)
+    check_threads()
     nsteps = length(alg.schedule)
     nthreads = min(Threads.nthreads(), nsteps)
     ΔlogZ = zeros(Float64, nsteps)
     algs = [deepcopy(alg) for _ in 1:nthreads]
-    p = ProgressMeter.Progress(length(alg.schedule); enabled=progress, desc="TI Sampling :")
+    p = ProgressMeter.Progress(
+        length(alg.schedule); enabled=progress, desc="TI Multithreaded Sampling:"
+    )
     Threads.@threads for i in 1:nsteps
         id = Threads.threadid()
         ΔlogZ[i] = evaluate_loglikelihood(
@@ -81,12 +94,35 @@ function (alg::ThermInt)(
     return trapz(alg.schedule, ΔlogZ)
 end
 
+function check_processes()
+    return Distributed.nworkers() > 1 ||
+           @warn "Only one process available, parallelization will not happen. Start Julia with `julia -p n`"
+end
+
 function (alg::ThermInt)(
     loglikelihood,
     logprior,
-    x_init::Real,
-    method::TIParallelThreads=TIParallelThreads();
+    x_init::AbstractVector,
+    ::TIDistributed;
+    progress=false,
     kwargs...,
+)
+    check_processes()
+    progress && @warn "progress is not possible with distributed computing for now."
+    # p = ProgressMeter.Progress(
+    # length(alg.schedule); enabled=progress, desc="TI (multiple processes) Sampling :"
+    # )
+
+    pool = Distributed.CachingPool(Distributed.workers())
+    function local_eval(β)
+        return evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...)
+    end
+    ΔlogZ = pmap(local_eval, pool, alg.schedule)
+    return trapz(alg.schedule, ΔlogZ)
+end
+
+function (alg::ThermInt)(
+    loglikelihood, logprior, x_init::Real, method::TIEnsemble=TISerial(); kwargs...
 )
     throw(
         ArgumentError(
@@ -117,7 +153,7 @@ function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
     proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
     adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
 
-    samples, stats = sample(
+    samples, _ = sample(
         alg.rng,
         hamiltonian,
         proposal,

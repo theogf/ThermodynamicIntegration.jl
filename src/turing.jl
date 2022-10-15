@@ -1,8 +1,10 @@
 using .Turing: DynamicPPL, Prior
 
-function (alg::ThermInt)(model::DynamicPPL.Model; progress=true, kwargs...)
+function (alg::ThermInt)(
+    model::DynamicPPL.Model, ::TISerial=TISerial(); progress=true, kwargs...
+)
     nsteps = length(alg.schedule)
-    p = Progress(nsteps; enabled=progress, desc="TI sampling")
+    p = Progress(nsteps; enabled=progress, desc="TI Sampling")
     ΔlogZ = [
         begin
             ProgressMeter.next!(p)
@@ -12,19 +14,30 @@ function (alg::ThermInt)(model::DynamicPPL.Model; progress=true, kwargs...)
     return trapz(alg.schedule, ΔlogZ)
 end
 
-function (alg::ThermInt)(
-    model::DynamicPPL.Model, ::TIParallelThreads; progress=true, kwargs...
-)
+function (alg::ThermInt)(model::DynamicPPL.Model, ::TIThreads; progress=true, kwargs...)
+    check_threads()
     nsteps = length(alg.schedule)
     nthreads = min(Threads.nthreads(), nsteps)
     ΔlogZ = zeros(Float64, nsteps)
     algs = [deepcopy(alg) for _ in 1:nthreads]
-    p = Progress(nsteps; enabled=progress, desc="TI sampling")
+    p = Progress(nsteps; enabled=progress, desc="TI Multithreaded Sampling")
     Threads.@threads for i in 1:nsteps
         id = Threads.threadid()
         ΔlogZ[i] = evaluate_loglikelihood(model, algs[id], alg.schedule[i]; kwargs...)
         ProgressMeter.next!(p)
     end
+    return trapz(alg.schedule, ΔlogZ)
+end
+
+function (alg::ThermInt)(model::DynamicPPL.Model, ::TIDistributed; progress=true, kwargs...)
+    check_processes()
+    progress && @warn "progress is not possible with distributed computing for now."
+    # p = Progress(nsteps; enabled=progress, desc="TI sampling")
+    pool = Distributed.CachingPool(Distributed.workers())
+    function local_eval(β)
+        return evaluate_loglikelihood(model, alg, β; kwargs...)
+    end
+    ΔlogZ = pmap(local_eval, pool, alg.schedule)
     return trapz(alg.schedule, ΔlogZ)
 end
 

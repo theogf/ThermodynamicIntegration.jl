@@ -20,6 +20,7 @@ For a different way of computing the evidence integral see also my [BayesianQuad
 
 A simple package to compute Thermodynamic Integration for computing the evidence in a Bayesian setting.
 You need to provide the `logprior` and the `loglikelihood` as well as an initial sample:
+
 ```julia
     using Distributions, ThermodynamicIntegration
     D = 5
@@ -36,7 +37,8 @@ You need to provide the `logprior` and the `loglikelihood` as well as an initial
     # -8.211990123364176
 ```
 
-You can also simply pass a Turing model :
+You can also simply pass a Turing model:
+
 ```julia
     using Turing
     @model function gauss(y)
@@ -53,10 +55,20 @@ You can also simply pass a Turing model :
 ## Parallel sampling
 
 The algorithm also works on multiple threads by calling :
+
 ```julia
     alg = ThermInt(n_samples=5000) 
-    logZ = alg(logprior, loglikelihood, rand(prior), TIParallelThreads())
+    logZ = alg(logprior, loglikelihood, rand(prior), TIThreads())
 ```
+
+or on multiple processes:
+
+```julia
+    alg = ThermInt(n_samples=5000) 
+    logZ = alg(logprior, loglikelihood, rand(prior), TIDistributed())
+```
+
+Note that you need to load `ThermodynamicIntegration` and other necessary external packages on your additional processes via `@everywhere`.
 
 ## Sampling methods
 
