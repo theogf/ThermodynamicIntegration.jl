@@ -15,7 +15,7 @@ Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 Trapz = "592b5752-818d-11e9-1e9a-2b8ca4a44cd1"
 
 [compat]
-AdvancedHMC = "0.2, 0.3"
+AdvancedHMC = "0.2, 0.3, 0.6"
 ForwardDiff = "0.10"
 ProgressMeter = "1"
 Requires = "1"
