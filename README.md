@@ -24,8 +24,8 @@ You need to provide the `logprior` and the `loglikelihood` as well as an initial
 ```julia
     using Distributions, ThermodynamicIntegration
     D = 5
-    prior = MvNormal(0.5 * ones(D)) # The prior distribution
-    likelihood = MvNormal(2.0 * ones(D))
+    prior = MvNormal(Diagonal(0.5 * ones(D))) # The prior distribution
+    likelihood = MvNormal(Diagonal(2.0 * ones(D)))
     logprior(x) = logpdf(prior, x) # The log-prior function
     loglikelihood(x) = logpdf(likelihood, x) # The log-likelihood function
 

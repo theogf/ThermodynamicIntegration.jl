@@ -1,8 +1,8 @@
 function test_basic_model(
     alg::ThermInt, method::ThermodynamicIntegration.TIEnsemble=TISerial(); D=5, atol=1e-1
 )
-    prior = MvNormal(0.5 * ones(D))
-    likelihood = MvNormal(2.0 * ones(D))
+    prior = MvNormal(Diagonal(0.5 * ones(D)))
+    likelihood = MvNormal(Diagonal(2.0 * ones(D)))
     logprior(x) = logpdf(prior, x)
     loglikelihood(x) = logpdf(likelihood, x)
     logZ = alg(logprior, loglikelihood, rand(prior), method)
@@ -15,8 +15,8 @@ end
 function test_basic_turing(
     alg::ThermInt, method::ThermodynamicIntegration.TIEnsemble=TISerial(); D=5, atol=1e-1
 )
-    prior = MvNormal(0.5 * ones(D))
-    likelihood = MvNormal(2.0 * ones(D))
+    prior = MvNormal(Diagonal(0.5 * ones(D)))
+    likelihood = MvNormal(Diagonal(2.0 * ones(D)))
     @model function gauss(y)
         x ~ prior
         return y ~ MvNormal(x, cov(likelihood))
