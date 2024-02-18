@@ -29,13 +29,15 @@ function (alg::ThermInt)(model::DynamicPPL.Model, ::TIThreads; progress=true, kw
     return trapz(alg.schedule, ΔlogZ)
 end
 
-function (alg::ThermInt)(model::DynamicPPL.Model, ::TIDistributed; progress=true, kwargs...)
+function (alg::ThermInt)(
+    model::DynamicPPL.Model, ::TIDistributed; progress=false, kwargs...
+)
     check_processes()
     progress && @warn "progress is not possible with distributed computing for now."
     # p = Progress(nsteps; enabled=progress, desc="TI sampling")
     pool = Distributed.CachingPool(Distributed.workers())
     function local_eval(β)
-        return evaluate_loglikelihood(model, alg, β; kwargs...)
+        return evaluate_loglikelihood(copy(model), alg, β; kwargs...)
     end
     ΔlogZ = pmap(local_eval, pool, alg.schedule)
     return trapz(alg.schedule, ΔlogZ)

@@ -72,8 +72,9 @@ Note that you need to load `ThermodynamicIntegration` and other necessary extern
 
 ## Sampling methods
 
-Right now sampling is based on [`AdvancedHMC.jl`](https://github.com/TuringLang/AdvancedHMC.jl), with the `ForwardDiff` AD backend.
-To change the backend to `Zygote` or `ReverseDiff` (recommended for variables with large dimensions you can do:
+Right now sampling is based on [`AdvancedHMC.jl`](https://github.com/TuringLang/AdvancedHMC.jl), with the [`ForwardDiff.jl`](https://github.com/JuliaDiff/ForwardDiff.jl) AD backend.
+To change the backend to [`Zygote`](https://github.com/FluxML/Zygote.jl) or [`ReverseDiff`](https://github.com/JuliaDiff/ReverseDiff.jl) (recommended for variables with large dimensions) you can do:
+
 ```julia
     using Zygote # (or ReverseDiff)
     ThermoDynamicIntegration.set_adbackend(:Zygote) # (or :ReverseDiff)
