@@ -44,31 +44,17 @@ function (alg::ThermInt)(
 end
 
 function evaluate_loglikelihood(model::DynamicPPL.Model, alg::ThermInt, β::Real)
+    θ_init = rand(model)
     powerlogπ = power_logjoint(model, β)
     loglikelihood = get_loglikelihood(model)
-    x_init = vec(Array(sample(model, Prior(), 1))) # Bad ugly hack cause I don't know how to sample from the prior
-    samples = sample_powerlogπ(powerlogπ, alg, x_init)
+    samples = sample_powerlogπ(powerlogπ, alg, θ_init)
     return mean(loglikelihood, samples)
 end
 
-function power_logjoint(model, β)
-    ctx = DynamicPPL.MiniBatchContext(DynamicPPL.DefaultContext(), β)
-    spl = DynamicPPL.SampleFromPrior()
-    vi = DynamicPPL.VarInfo(model)
-    return function f(z)
-        varinfo = DynamicPPL.VarInfo(vi, spl, z)
-        model(varinfo, spl, ctx)
-        return DynamicPPL.getlogp(varinfo)
-    end
+function power_logjoint(model::DynamicPPL.Model, β::Real)
+    return PowerProblem{LogDensityProblems.dimension(DynamicPPL.LogDensityFunction(model))}(;
+        vi=DynamicPPL.VarInfo()θ -> logprior(model, θ), θ -> loglikelihood(model, θ), β
+    )
 end
 
-function get_loglikelihood(model)
-    ctx = DynamicPPL.LikelihoodContext()
-    spl = DynamicPPL.SampleFromPrior()
-    vi = DynamicPPL.VarInfo(model)
-    return function f(z)
-        varinfo = DynamicPPL.VarInfo(vi, spl, z)
-        model(varinfo, spl, ctx)
-        return DynamicPPL.getlogp(varinfo)
-    end
-end
+get_loglikelihood(model) = θ -> loglikelihood(model, θ)

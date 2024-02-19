@@ -4,6 +4,7 @@ using AdvancedHMC
 using Distributed
 using ForwardDiff
 using ProgressMeter
+using LogDensityProblems: LogDensityProblems
 using Random: Random, AbstractRNG, default_rng
 using Requires
 using Statistics

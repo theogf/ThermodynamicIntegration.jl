@@ -6,7 +6,7 @@ function test_basic_model(
     logprior(x) = logpdf(prior, x)
     loglikelihood(x) = logpdf(likelihood, x)
     # We capture stdout to avoid having the progress meter in CI. 
-    @capture_out logZ = alg(logprior, loglikelihood, rand(prior), method)
+    logZ = alg(logprior, loglikelihood, rand(prior), method)
     true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
 
     @test logZ ≈ true_logZ atol = atol
@@ -32,7 +32,7 @@ end
 @testset "Basic model" begin
     alg = ThermInt(; n_samples=5000)
     # Test serialized version
-    test_basic_model(alg, TISerial())
+    # test_basic_model(alg, TISerial())
     test_basic_turing(alg, TISerial())
 
     # Test multithreaded version

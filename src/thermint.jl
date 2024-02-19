@@ -74,7 +74,7 @@ function check_threads()
 end
 
 function (alg::ThermInt)(
-    loglikelihood, logprior, x_init::AbstractVector, ::TIThreads; progress=true, kwargs...
+    loglikelihood, logprior, θ_init::AbstractVector, ::TIThreads; progress=true, kwargs...
 )
     check_threads()
     nsteps = length(alg.schedule)
@@ -87,7 +87,7 @@ function (alg::ThermInt)(
     Threads.@threads for i in 1:nsteps
         id = Threads.threadid()
         ΔlogZ[i] = evaluate_loglikelihood(
-            loglikelihood, logprior, algs[id], x_init, alg.schedule[i]; kwargs...
+            loglikelihood, logprior, algs[id], θ_init, alg.schedule[i]; kwargs...
         )
         ProgressMeter.next!(p)
     end
@@ -102,7 +102,7 @@ end
 function (alg::ThermInt)(
     loglikelihood,
     logprior,
-    x_init::AbstractVector,
+    θ_init::AbstractVector,
     ::TIDistributed;
     progress=false,
     kwargs...,
@@ -115,7 +115,7 @@ function (alg::ThermInt)(
 
     pool = Distributed.CachingPool(Distributed.workers())
     function local_eval(β)
-        return evaluate_loglikelihood(loglikelihood, logprior, alg, x_init, β; kwargs...)
+        return evaluate_loglikelihood(loglikelihood, logprior, alg, θ_init, β; kwargs...)
     end
     ΔlogZ = pmap(local_eval, pool, alg.schedule)
     return trapz(alg.schedule, ΔlogZ)
@@ -135,29 +135,51 @@ function (alg::ThermInt)(
     )
 end
 
-function evaluate_loglikelihood(loglikelihood, logprior, alg::ThermInt, x_init, β::Real)
+struct PowerProblem{N,LP,LL}
+    logprior::LP
+    loglikelihood::LL
+    β::Float64
+    function PowerProblem{N}(logprior::T1, loglikelihood::T2, β::Real) where {N,T1,T2}
+        return new{N,T1,T2}(logprior, loglikelihood, β)
+    end
+end
+
+function PowerProblem(logprior, loglikelihood, β::Real, θ_init)
+    return PowerProblem{length(θ_init)}(logprior, loglikelihood, β)
+end
+
+function LogDensityProblems.capabilities(::Type{<:PowerProblem})
+    return LogDensityProblems.LogDensityOrder{0}()
+end
+LogDensityProblems.dimension(::PowerProblem{N}) where {N} = N
+function LogDensityProblems.logdensity(pp::PowerProblem, θ)
+    return pp.β * pp.loglikelihood(θ) + pp.logprior(θ)
+end
+
+function evaluate_loglikelihood(loglikelihood, logprior, alg::ThermInt, θ_init, β::Real)
     powerlogπ(θ) = β * loglikelihood(θ) + logprior(θ)
-    samples = sample_powerlogπ(powerlogπ, alg, x_init)
-    x_init .= samples[end] # Update the initial sample to be the last one of the chain
+    powerlogπ = PowerProblem(logprior, loglikelihood, β, θ_init)
+    samples = sample_powerlogπ(powerlogπ, alg, θ_init)
+    θ_init .= samples[end] # Update the initial sample to be the last one of the chain
     return mean(loglikelihood, samples)
 end
 
-function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
-    D = length(x_init)
-    metric = DiagEuclideanMetric(D)
-    hamiltonian = get_hamiltonian(metric, powerlogπ, alg)
+function sample_powerlogπ(powerlogπ, alg::ThermInt, θ_init)
+    N = length(θ_init)
+    metric = DiagEuclideanMetric(N)
+    hamiltonian = Hamiltonian(metric, powerlogπ, ADBACKEND[])
 
-    initial_ϵ = find_good_stepsize(hamiltonian, x_init)
+    initial_ϵ = find_good_stepsize(hamiltonian, θ_init)
     integrator = Leapfrog(initial_ϵ)
 
-    proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+    kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
     adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
 
     samples, _ = sample(
         alg.rng,
         hamiltonian,
-        proposal,
-        x_init,
+        kernel,
+        θ_init,
         alg.n_samples,
         adaptor,
         alg.n_warmup;
@@ -165,14 +187,4 @@ function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
         progress=false,
     )
     return samples
-end
-
-function get_hamiltonian(metric, powerlogπ, ::ThermInt{:ForwardDiff})
-    return Hamiltonian(metric, powerlogπ, ForwardDiff)
-end
-function get_hamiltonian(metric, powerlogπ, ::ThermInt{:Zygote})
-    return Hamiltonian(metric, powerlogπ, Zygote)
-end
-function get_hamiltonian(metric, powerlogπ, ::ThermInt{:ReverseDiff})
-    return Hamiltonian(metric, powerlogπ, ReverseDiff)
 end
