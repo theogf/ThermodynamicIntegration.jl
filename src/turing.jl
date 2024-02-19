@@ -52,8 +52,9 @@ function evaluate_loglikelihood(model::DynamicPPL.Model, alg::ThermInt, β::Real
 end
 
 function power_logjoint(model::DynamicPPL.Model, β::Real)
+    vi = DynamicPPL.VarInfo()
     return PowerProblem{LogDensityProblems.dimension(DynamicPPL.LogDensityFunction(model))}(;
-        vi=DynamicPPL.VarInfo()θ -> logprior(model, θ), θ -> loglikelihood(model, θ), β
+        θ -> logprior(model, θ), θ -> loglikelihood(model, θ), β
     )
 end
 
