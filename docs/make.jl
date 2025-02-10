@@ -8,7 +8,7 @@ makedocs(;
     sitename="ThermodynamicIntegration.jl",
     format=Documenter.HTML(;
         prettyurls=get(ENV, "CI", "false") == "true",
-        canonical="https://theogf.github.io/ThermodynamicIntegration.jl",
+        canonical="https://theogf.dev/ThermodynamicIntegration.jl",
         assets=String[],
     ),
     pages=["Home" => "index.md"],

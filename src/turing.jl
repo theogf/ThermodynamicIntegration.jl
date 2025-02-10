@@ -48,26 +48,32 @@ end
 function evaluate_loglikelihood(model::DynamicPPL.Model, alg::ThermInt, β::Real)
     logprior = get_logprior(model)
     loglikelihood = get_loglikelihood(model)
-    x_init = vec(Array(sample(model, Prior(), 1))) # Bad ugly hack cause I don't know how to sample from the prior
-    pj = PowerJoint(β, length(x_init), logprior, loglikelihood)
+    x_init = vec(Array(sample(model, Prior(), 1; progress=false))) # Bad ugly hack cause I don't know how to sample from the prior
+    pj = PowerJoint(β, length(x_init), loglikelihood, logprior)
     samples = sample_powerlogπ(pj, alg, x_init)
     return mean(loglikelihood, samples)
 end
 
+"""
+Build a logprior function acting on the flattened version of the parameters.
+"""
 function get_logprior(model)
     spl = DynamicPPL.SampleFromPrior()
     vi = DynamicPPL.VarInfo(model)
     return function f(z)
         varinfo = DynamicPPL.VarInfo(vi, spl, z)
-        return DynamicPPL.loglikelihood(model, varinfo)
+        return DynamicPPL.logprior(model, varinfo)
     end
 end
 
+"""
+Build a loglikelihood function acting on the flattened version of the parameters.
+"""
 function get_loglikelihood(model)
     spl = DynamicPPL.SampleFromPrior()
     vi = DynamicPPL.VarInfo(model)
     return function f(z)
         varinfo = DynamicPPL.VarInfo(vi, spl, z)
-        return DynamicPPL.logprior(model, varinfo)
+        return DynamicPPL.loglikelihood(model, varinfo)
     end
 end
