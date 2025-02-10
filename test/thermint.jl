@@ -1,35 +1,45 @@
+using ThermodynamicIntegration
+using Distributed
+using Distributions
+using Test
+using LinearAlgebra
+using Turing
+
 function test_basic_model(
     alg::ThermInt, method::ThermodynamicIntegration.TIEnsemble=TISerial(); D=5, atol=1e-1
 )
-    prior = MvNormal(Diagonal(0.5 * ones(D)))
-    likelihood = MvNormal(Diagonal(2.0 * ones(D)))
-    logprior(x) = logpdf(prior, x)
-    loglikelihood(x) = logpdf(likelihood, x)
-    # We capture stdout to avoid having the progress meter in CI. 
-    @capture_out logZ = alg(logprior, loglikelihood, rand(prior), method)
-    true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
+    @testset "$(nameof(typeof(alg))) - $(nameof(typeof(method)))" begin
+        prior = MvNormal(Diagonal(0.5 * ones(D)))
+        likelihood = MvNormal(Diagonal(2.0 * ones(D)))
+        lprior(x) = logpdf(prior, x)
+        llikelihood(x) = logpdf(likelihood, x)
+        logZ = alg(lprior, llikelihood, rand(prior), method)
+        true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
 
-    @test logZ ≈ true_logZ atol = atol
-    @test_throws ArgumentError alg(logprior, loglikelihood, first(rand(prior)), method)
+        @test logZ ≈ true_logZ atol = atol
+        @test_throws ArgumentError alg(lprior, llikelihood, first(rand(prior)), method)
+    end
 end
 
 function test_basic_turing(
     alg::ThermInt, method::ThermodynamicIntegration.TIEnsemble=TISerial(); D=5, atol=1e-1
 )
-    prior = MvNormal(Diagonal(0.5 * ones(D)))
-    likelihood = MvNormal(Diagonal(2.0 * ones(D)))
-    @model function gauss(y)
-        x ~ prior
-        return y ~ MvNormal(x, cov(likelihood))
-    end
-    m = gauss(zeros(D))
-    logZ = alg(m, method)
-    true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
+    @testset "Turing - $(nameof(typeof(alg))) - $(nameof(typeof(method)))" begin
+        prior = MvNormal(Diagonal(0.5 * ones(D)))
+        likelihood = MvNormal(Diagonal(2.0 * ones(D)))
+        @model function gauss(y)
+            x ~ prior
+            return y ~ MvNormal(x, cov(likelihood))
+        end
+        m = gauss(zeros(D))
+        logZ = alg(m, method)
+        true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
 
-    @test logZ ≈ true_logZ atol = atol
+        @test logZ ≈ true_logZ atol = atol
+    end
 end
 
-@testset "Basic model" begin
+@testset "Test basic model with different options" begin
     alg = ThermInt(; n_samples=5000)
     # Test serialized version
     test_basic_model(alg, TISerial())

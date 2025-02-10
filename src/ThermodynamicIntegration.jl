@@ -6,6 +6,7 @@ using ForwardDiff
 using ProgressMeter
 using Random: Random, AbstractRNG, default_rng
 using Requires
+using LogDensityProblems
 using Statistics
 using Trapz
 
@@ -24,6 +25,8 @@ function set_adbackend(::Any)
         " `using Zygote/ReverseDiff` in your script",
     )
 end
+
+const SHOW_PROGRESS_BARS = parse(Bool, get(ENV, "PROGRESS_BARS", "true"))
 
 include("thermint.jl")
 

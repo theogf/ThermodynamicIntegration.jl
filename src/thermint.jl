@@ -27,22 +27,15 @@ function ThermInt(rng::AbstractRNG, schedule; n_samples::Int=2000, n_warmup::Int
 end
 
 function ThermInt(schedule; n_samples::Int=2000, n_warmup::Int=500)
-    return ThermInt(default_rng(), schedule; n_samples=n_samples, n_warmup=n_warmup)
+    return ThermInt(default_rng(), schedule; n_samples, n_warmup)
 end
 
 function ThermInt(rng::AbstractRNG; n_steps::Int, n_samples::Int=2000, n_warmup::Int=500)
-    return ThermInt(
-        rng, range(0, 1; length=n_steps) .^ 5; n_samples=n_samples, n_warmup=n_warmup
-    )
+    return ThermInt(rng, range(0, 1; length=n_steps) .^ 5; n_samples, n_warmup)
 end
 
 function ThermInt(; n_steps::Int=30, n_samples::Int=2000, n_warmup::Int=500)
-    return ThermInt(
-        default_rng(),
-        range(0, 1; length=n_steps) .^ 5;
-        n_samples=n_samples,
-        n_warmup=n_warmup,
-    )
+    return ThermInt(default_rng(), range(0, 1; length=n_steps) .^ 5; n_samples, n_warmup)
 end
 
 abstract type TIEnsemble end
@@ -56,7 +49,7 @@ function (alg::ThermInt)(
     logprior,
     x_init::AbstractVector,
     ::TISerial=TISerial();
-    progress=true,
+    progress=SHOW_PROGRESS_BARS,
     kwargs...,
 )
     p = ProgressMeter.Progress(length(alg.schedule); enabled=progress, desc="TI Sampling:")
@@ -74,7 +67,12 @@ function check_threads()
 end
 
 function (alg::ThermInt)(
-    loglikelihood, logprior, x_init::AbstractVector, ::TIThreads; progress=true, kwargs...
+    loglikelihood,
+    logprior,
+    x_init::AbstractVector,
+    ::TIThreads;
+    progress=SHOW_PROGRESS_BARS,
+    kwargs...,
 )
     check_threads()
     nsteps = length(alg.schedule)
@@ -104,7 +102,7 @@ function (alg::ThermInt)(
     logprior,
     x_init::AbstractVector,
     ::TIDistributed;
-    progress=false,
+    progress=SHOW_PROGRESS_BARS,
     kwargs...,
 )
     check_processes()
@@ -135,28 +133,43 @@ function (alg::ThermInt)(
     )
 end
 
+struct PowerJoint{Tβ,FL,FP}
+    β::Tβ
+    dim::Int
+    loglikelihood::FL
+    logprior::FP
+end
+
+function LogDensityProblems.logdensity((; β, loglikelihood, logprior)::PowerJoint, θ)
+    return β * loglikelihood(θ) + logprior(θ)
+end
+LogDensityProblems.dimension((; dim)::PowerJoint) = dim
+function LogDensityProblems.capabilities(::Type{<:PowerJoint})
+    return LogDensityProblems.LogDensityOrder{0}()
+end
+
 function evaluate_loglikelihood(loglikelihood, logprior, alg::ThermInt, x_init, β::Real)
-    powerlogπ(θ) = β * loglikelihood(θ) + logprior(θ)
-    samples = sample_powerlogπ(powerlogπ, alg, x_init)
+    pj = PowerJoint(β, length(x_init), loglikelihood, logprior)
+    samples = sample_powerlogπ(pj, alg, x_init)
     x_init .= samples[end] # Update the initial sample to be the last one of the chain
     return mean(loglikelihood, samples)
 end
 
-function sample_powerlogπ(powerlogπ, alg::ThermInt, x_init)
-    D = length(x_init)
+function sample_powerlogπ(pj::PowerJoint, alg::ThermInt, x_init)
+    D = LogDensityProblems.dimension(pj)
     metric = DiagEuclideanMetric(D)
-    hamiltonian = get_hamiltonian(metric, powerlogπ, alg)
+    hamiltonian = get_hamiltonian(metric, pj, alg)
 
     initial_ϵ = find_good_stepsize(hamiltonian, x_init)
     integrator = Leapfrog(initial_ϵ)
 
-    proposal = AdvancedHMC.NUTS{MultinomialTS,GeneralisedNoUTurn}(integrator)
+    kernel = HMCKernel(Trajectory{MultinomialTS}(integrator, GeneralisedNoUTurn()))
     adaptor = StanHMCAdaptor(MassMatrixAdaptor(metric), StepSizeAdaptor(0.8, integrator))
 
     samples, _ = sample(
         alg.rng,
         hamiltonian,
-        proposal,
+        kernel,
         x_init,
         alg.n_samples,
         adaptor,
