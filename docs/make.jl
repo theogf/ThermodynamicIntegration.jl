@@ -13,5 +13,3 @@ makedocs(;
     ),
     pages=["Home" => "index.md"],
 )
-
-deploydocs(; repo="github.com/theogf/ThermodynamicIntegration.jl")
