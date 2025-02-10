@@ -17,7 +17,7 @@ function test_basic_model(
         true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
 
         @test logZ ≈ true_logZ atol = atol
-        @test_throws ArgumentError alg(logprior, loglikelihood, first(rand(prior)), method)
+        @test_throws ArgumentError alg(lprior, llikelihood, first(rand(prior)), method)
     end
 end
 
