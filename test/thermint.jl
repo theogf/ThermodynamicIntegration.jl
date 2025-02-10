@@ -8,7 +8,7 @@ using Turing
 function test_basic_model(
     alg::ThermInt, method::ThermodynamicIntegration.TIEnsemble=TISerial(); D=5, atol=1e-1
 )
-    @testset "$(alg) - $(nameof(typeof(method)))" begin
+    @testset "$(nameof(typeof(alg))) - $(nameof(typeof(method)))" begin
         prior = MvNormal(Diagonal(0.5 * ones(D)))
         likelihood = MvNormal(Diagonal(2.0 * ones(D)))
         logprior(x) = logpdf(prior, x)
@@ -25,17 +25,19 @@ end
 function test_basic_turing(
     alg::ThermInt, method::ThermodynamicIntegration.TIEnsemble=TISerial(); D=5, atol=1e-1
 )
-    prior = MvNormal(Diagonal(0.5 * ones(D)))
-    likelihood = MvNormal(Diagonal(2.0 * ones(D)))
-    @model function gauss(y)
-        x ~ prior
-        return y ~ MvNormal(x, cov(likelihood))
-    end
-    m = gauss(zeros(D))
-    logZ = alg(m, method)
-    true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
+    @testset "Turing - $(nameof(typeof(alg))) - $(nameof(typeof(method)))" begin
+        prior = MvNormal(Diagonal(0.5 * ones(D)))
+        likelihood = MvNormal(Diagonal(2.0 * ones(D)))
+        @model function gauss(y)
+            x ~ prior
+            return y ~ MvNormal(x, cov(likelihood))
+        end
+        m = gauss(zeros(D))
+        logZ = alg(m, method)
+        true_logZ = -0.5 * (logdet(cov(prior) + cov(likelihood)) + D * log(2π))
 
-    @test logZ ≈ true_logZ atol = atol
+        @test logZ ≈ true_logZ atol = atol
+    end
 end
 
 @testset "Test basic model with different options" begin

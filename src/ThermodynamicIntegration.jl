@@ -6,6 +6,7 @@ using ForwardDiff
 using ProgressMeter
 using Random: Random, AbstractRNG, default_rng
 using Requires
+using LogDensityProblems
 using Statistics
 using Trapz
 
