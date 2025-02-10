@@ -1,7 +1,7 @@
 using .Turing: DynamicPPL, Prior
 
 function (alg::ThermInt)(
-    model::DynamicPPL.Model, ::TISerial=TISerial(); progress=true, kwargs...
+    model::DynamicPPL.Model, ::TISerial=TISerial(); progress=SHOW_PROGRESS_BARS, kwargs...
 )
     nsteps = length(alg.schedule)
     p = Progress(nsteps; enabled=progress, desc="TI Sampling")
@@ -14,7 +14,9 @@ function (alg::ThermInt)(
     return trapz(alg.schedule, ΔlogZ)
 end
 
-function (alg::ThermInt)(model::DynamicPPL.Model, ::TIThreads; progress=true, kwargs...)
+function (alg::ThermInt)(
+    model::DynamicPPL.Model, ::TIThreads; progress=SHOW_PROGRESS_BARS, kwargs...
+)
     check_threads()
     nsteps = length(alg.schedule)
     nthreads = min(Threads.nthreads(), nsteps)
@@ -30,7 +32,7 @@ function (alg::ThermInt)(model::DynamicPPL.Model, ::TIThreads; progress=true, kw
 end
 
 function (alg::ThermInt)(
-    model::DynamicPPL.Model, ::TIDistributed; progress=false, kwargs...
+    model::DynamicPPL.Model, ::TIDistributed; progress=SHOW_PROGRESS_BARS, kwargs...
 )
     check_processes()
     progress && @warn "progress is not possible with distributed computing for now."

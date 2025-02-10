@@ -25,6 +25,8 @@ function set_adbackend(::Any)
     )
 end
 
+const SHOW_PROGRESS_BARS = parse(Bool, get(ENV, "PROGRESS_BARS", "true"))
+
 include("thermint.jl")
 
 function __init__()

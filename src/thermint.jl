@@ -56,7 +56,7 @@ function (alg::ThermInt)(
     logprior,
     x_init::AbstractVector,
     ::TISerial=TISerial();
-    progress=true,
+    progress=SHOW_PROGRESS_BARS,
     kwargs...,
 )
     p = ProgressMeter.Progress(length(alg.schedule); enabled=progress, desc="TI Sampling:")
@@ -74,7 +74,12 @@ function check_threads()
 end
 
 function (alg::ThermInt)(
-    loglikelihood, logprior, x_init::AbstractVector, ::TIThreads; progress=true, kwargs...
+    loglikelihood,
+    logprior,
+    x_init::AbstractVector,
+    ::TIThreads;
+    progress=SHOW_PROGRESS_BARS,
+    kwargs...,
 )
     check_threads()
     nsteps = length(alg.schedule)
@@ -104,7 +109,7 @@ function (alg::ThermInt)(
     logprior,
     x_init::AbstractVector,
     ::TIDistributed;
-    progress=false,
+    progress=SHOW_PROGRESS_BARS,
     kwargs...,
 )
     check_processes()
