@@ -18,7 +18,7 @@ Trapz = "592b5752-818d-11e9-1e9a-2b8ca4a44cd1"
 [compat]
 AdvancedHMC = "0.6, 0.7"
 Distributed = "1"
-ForwardDiff = "0.10"
+ForwardDiff = "0.10, 1"
 LinearAlgebra = "1"
 LogDensityProblems = "2"
 ProgressMeter = "1"
